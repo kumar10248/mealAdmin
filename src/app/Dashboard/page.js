@@ -211,7 +211,7 @@ const MenuAdminPanel = () => {
   if (loading) return <div className="flex justify-center p-8">Loading menu data...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen  py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Menu Administration</h1>
