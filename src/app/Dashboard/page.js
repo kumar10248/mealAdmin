@@ -38,16 +38,16 @@ const MenuAdminPanel = () => {
       // Transform data for display if needed
       const processedData = data.map(menu => ({
         ...menu,
-        breakfast: Array.isArray(menu.breakfast) ? menu.breakfast : menu.breakfast?.split(',') || [],
-        lunch: Array.isArray(menu.lunch) ? menu.lunch : menu.lunch?.split(',') || [],
-        snacks: Array.isArray(menu.snacks) ? menu.snacks : menu.snacks?.split(',') || [],
-        dinner: Array.isArray(menu.dinner) ? menu.dinner : menu.dinner?.split(',') || []
+        breakfast: Array.isArray(menu.breakfast) ? menu.breakfast : (menu.breakfast?.split(',').map(item => item.trim()) || []),
+        lunch: Array.isArray(menu.lunch) ? menu.lunch : (menu.lunch?.split(',').map(item => item.trim()) || []),
+        snacks: Array.isArray(menu.snacks) ? menu.snacks : (menu.snacks?.split(',').map(item => item.trim()) || []),
+        dinner: Array.isArray(menu.dinner) ? menu.dinner : (menu.dinner?.split(',').map(item => item.trim()) || [])
       }));
       
       setMenus(processedData);
       setCurrentView('week');
     } catch (err) {
-      setError(err.message);
+      setError(err?.message || "Failed to fetch weekly menus");
     } finally {
       setLoading(false);
     }
@@ -61,16 +61,16 @@ const MenuAdminPanel = () => {
       // Transform data for display if needed
       const processedData = data.map(menu => ({
         ...menu,
-        breakfast: Array.isArray(menu.breakfast) ? menu.breakfast : menu.breakfast?.split(',') || [],
-        lunch: Array.isArray(menu.lunch) ? menu.lunch : menu.lunch?.split(',') || [],
-        snacks: Array.isArray(menu.snacks) ? menu.snacks : menu.snacks?.split(',') || [],
-        dinner: Array.isArray(menu.dinner) ? menu.dinner : menu.dinner?.split(',') || []
+        breakfast: Array.isArray(menu.breakfast) ? menu.breakfast : (menu.breakfast?.split(',').map(item => item.trim()) || []),
+        lunch: Array.isArray(menu.lunch) ? menu.lunch : (menu.lunch?.split(',').map(item => item.trim()) || []),
+        snacks: Array.isArray(menu.snacks) ? menu.snacks : (menu.snacks?.split(',').map(item => item.trim()) || []),
+        dinner: Array.isArray(menu.dinner) ? menu.dinner : (menu.dinner?.split(',').map(item => item.trim()) || [])
       }));
       
       setMenus(processedData);
       setCurrentView('all');
     } catch (err) {
-      setError(err.message);
+      setError(err?.message || "Failed to fetch all menus");
     } finally {
       setLoading(false);
     }
@@ -82,10 +82,10 @@ const MenuAdminPanel = () => {
       // Filter out empty items and join arrays into comma-separated strings
       const cleanFormData = {
         date: formData.date,
-        breakfast: formData.breakfast.filter(item => item.trim() !== '').join(', '),
-        lunch: formData.lunch.filter(item => item.trim() !== '').join(', '),
-        snacks: formData.snacks.filter(item => item.trim() !== '').join(', '),
-        dinner: formData.dinner.filter(item => item.trim() !== '').join(', ')
+        breakfast: formData.breakfast.filter(item => item?.trim() !== '').join(', '),
+        lunch: formData.lunch.filter(item => item?.trim() !== '').join(', '),
+        snacks: formData.snacks.filter(item => item?.trim() !== '').join(', '),
+        dinner: formData.dinner.filter(item => item?.trim() !== '').join(', ')
       };
       
       await apiCreateMenu(cleanFormData);
@@ -98,18 +98,23 @@ const MenuAdminPanel = () => {
       }
       resetForm();
     } catch (err) {
-      setError(err.message);
+      setError(err?.message || "Failed to create menu");
     }
   };
 
   const updateMenu = async () => {
+    if (!selectedMenu?._id) {
+      setError("No menu selected for update");
+      return;
+    }
+    
     try {
       // Filter out empty items and join arrays into comma-separated strings
       const cleanFormData = {
-        breakfast: formData.breakfast.filter(item => item.trim() !== '').join(', '),
-        lunch: formData.lunch.filter(item => item.trim() !== '').join(', '),
-        snacks: formData.snacks.filter(item => item.trim() !== '').join(', '),
-        dinner: formData.dinner.filter(item => item.trim() !== '').join(', ')
+        breakfast: formData.breakfast.filter(item => item?.trim() !== '').join(', '),
+        lunch: formData.lunch.filter(item => item?.trim() !== '').join(', '),
+        snacks: formData.snacks.filter(item => item?.trim() !== '').join(', '),
+        dinner: formData.dinner.filter(item => item?.trim() !== '').join(', ')
       };
       
       await apiUpdateMenu(selectedMenu._id, cleanFormData);
@@ -122,11 +127,16 @@ const MenuAdminPanel = () => {
       }
       resetForm();
     } catch (err) {
-      setError(err.message);
+      setError(err?.message || "Failed to update menu");
     }
   };
 
   const deleteMenu = async (id) => {
+    if (!id) {
+      setError("No menu ID provided for deletion");
+      return;
+    }
+    
     if (!window.confirm('Are you sure you want to delete this menu?')) return;
 
     try {
@@ -138,7 +148,7 @@ const MenuAdminPanel = () => {
         await fetchAllMenus();
       }
     } catch (err) {
-      setError(err.message);
+      setError(err?.message || "Failed to delete menu");
     }
   };
 
@@ -152,21 +162,27 @@ const MenuAdminPanel = () => {
       dinner: []
     });
     setSelectedMenu(null);
-    // View is maintained by fetch functions, not reset here
+    // Set view back to 'week' or 'all' based on what was active
+    setCurrentView(prevView => prevView === 'edit' || prevView === 'create' ? 'week' : prevView);
   };
 
   const handleEditMenu = (menu) => {
+    if (!menu) return;
+    
     setSelectedMenu(menu);
     const menuDate = new Date(menu.date);
-    const dateString = menuDate.toISOString().split('T')[0];
+    // Handle invalid dates gracefully
+    const dateString = !isNaN(menuDate.getTime()) ? 
+      menuDate.toISOString().split('T')[0] : 
+      new Date().toISOString().split('T')[0];
     
     // Ensure we have arrays for all meal types
     setFormData({
       date: dateString,
-      breakfast: Array.isArray(menu.breakfast) ? [...menu.breakfast] : menu.breakfast?.split(',').map(item => item.trim()) || [],
-      lunch: Array.isArray(menu.lunch) ? [...menu.lunch] : menu.lunch?.split(',').map(item => item.trim()) || [],
-      snacks: Array.isArray(menu.snacks) ? [...menu.snacks] : menu.snacks?.split(',').map(item => item.trim()) || [],
-      dinner: Array.isArray(menu.dinner) ? [...menu.dinner] : menu.dinner?.split(',').map(item => item.trim()) || []
+      breakfast: Array.isArray(menu.breakfast) ? [...menu.breakfast] : (menu.breakfast?.split(',').map(item => item.trim()) || []),
+      lunch: Array.isArray(menu.lunch) ? [...menu.lunch] : (menu.lunch?.split(',').map(item => item.trim()) || []),
+      snacks: Array.isArray(menu.snacks) ? [...menu.snacks] : (menu.snacks?.split(',').map(item => item.trim()) || []),
+      dinner: Array.isArray(menu.dinner) ? [...menu.dinner] : (menu.dinner?.split(',').map(item => item.trim()) || [])
     });
     
     setCurrentView('edit');
@@ -198,20 +214,27 @@ const MenuAdminPanel = () => {
   };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (err) {
+      return 'Invalid date';
+    }
   };
 
   // **Render**
   if (loading) return <div className="flex justify-center p-8">Loading menu data...</div>;
 
   return (
-    <div className="min-h-screen  py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Menu Administration</h1>
@@ -241,7 +264,10 @@ const MenuAdminPanel = () => {
               All Menus
             </button>
             <button
-              onClick={() => setCurrentView('create')}
+              onClick={() => {
+                resetForm();
+                setCurrentView('create');
+              }}
               className={`px-4 py-2 rounded-md transition-colors flex items-center gap-1 ${
                 currentView === 'create' 
                   ? 'bg-green-600 text-white hover:bg-green-700' 
@@ -302,6 +328,7 @@ const MenuAdminPanel = () => {
                     {mealType}
                   </h3>
                   <button
+                    type="button"
                     onClick={() => addMealItem(mealType)}
                     className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
                   >
@@ -312,15 +339,16 @@ const MenuAdminPanel = () => {
 
                 <div className="space-y-2">
                   {formData[mealType].map((item, index) => (
-                    <div key={index} className="flex gap-2 items-center">
+                    <div key={`${mealType}-${index}`} className="flex gap-2 items-center">
                       <input
                         type="text"
-                        value={item}
+                        value={item || ''}
                         onChange={(e) => handleMealItemChange(mealType, index, e.target.value)}
                         className="flex-grow p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder={`Enter ${mealType} item...`}
                       />
                       <button
+                        type="button"
                         onClick={() => removeMealItem(mealType, index)}
                         className="p-2 text-red-500 hover:text-red-700 rounded-md hover:bg-red-50"
                       >
@@ -334,6 +362,7 @@ const MenuAdminPanel = () => {
 
             <div className="flex gap-2 justify-end pt-6 border-t border-gray-200">
               <button
+                type="button"
                 onClick={currentView === 'create' ? createMenu : updateMenu}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 transition-colors"
               >
@@ -357,7 +386,7 @@ const MenuAdminPanel = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {menus.map(menu => (
+                {menus.map(menu => menu && menu._id ? (
                   <div key={menu._id} className="bg-white shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
                     <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                       <div className="flex items-center gap-3">
@@ -368,12 +397,14 @@ const MenuAdminPanel = () => {
                       </div>
                       <div className="flex gap-2">
                         <button
+                          type="button"
                           onClick={() => handleEditMenu(menu)}
                           className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md"
                         >
                           <Edit size={18} />
                         </button>
                         <button
+                          type="button"
                           onClick={() => deleteMenu(menu._id)}
                           className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md"
                         >
@@ -384,14 +415,14 @@ const MenuAdminPanel = () => {
 
                     <div className="p-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                       {['breakfast', 'lunch', 'snacks', 'dinner'].map(mealType => (
-                        <div key={mealType} className="border border-gray-100 rounded-lg p-3 bg-gray-50">
+                        <div key={`${menu._id}-${mealType}`} className="border border-gray-100 rounded-lg p-3 bg-gray-50">
                           <h4 className="font-medium text-gray-900 text-sm uppercase mb-2 tracking-wide">
                             {mealType}
                           </h4>
                           {menu[mealType] && Array.isArray(menu[mealType]) && menu[mealType].length > 0 ? (
                             <ul className="list-disc list-inside space-y-1">
-                              {menu[mealType].map((item, index) => (
-                                <li key={index} className="text-gray-700 text-sm">{item}</li>
+                              {menu[mealType].map((item, index) => item && (
+                                <li key={`${menu._id}-${mealType}-${index}`} className="text-gray-700 text-sm">{item}</li>
                               ))}
                             </ul>
                           ) : (
@@ -401,7 +432,7 @@ const MenuAdminPanel = () => {
                       ))}
                     </div>
                   </div>
-                ))}
+                ) : null)}
               </div>
             )}
           </div>
