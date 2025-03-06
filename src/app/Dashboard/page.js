@@ -367,7 +367,7 @@ const MenuAdminPanel = () => {
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 transition-colors"
               >
                 <Save size={16} />
-                {currentView === 'create' ? 'Create Menu' : 'Save Changes'}
+                {currentView === 'create' ? 'Create New Menu' : 'Save Changes'}
               </button>
             </div>
           </div>
@@ -382,7 +382,7 @@ const MenuAdminPanel = () => {
 
             {menus.length === 0 ? (
               <div className="bg-white p-6 text-center rounded-lg border border-dashed border-gray-300 text-gray-500">
-                No menus found. Click "New Menu" to create one.
+                No menus found. Click &quot;New Menu&quot; to create one.
               </div>
             ) : (
               <div className="space-y-4">
