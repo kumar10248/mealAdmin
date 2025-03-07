@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import React, { useState, useEffect } from 'react';
 import { Calendar, Edit, Trash2, Plus, X, Save } from 'lucide-react';
 import { 
@@ -17,16 +17,33 @@ const MenuAdminPanel = () => {
   const [currentView, setCurrentView] = useState('week'); // 'week', 'all', 'create', 'edit'
   const [selectedMenu, setSelectedMenu] = useState(null);
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toLocaleDateString('en-CA'),
     breakfast: [],
     lunch: [],
     snacks: [],
     dinner: []
   });
+  // Track today and tomorrow using local dates
+  const [today] = useState(new Date().toLocaleDateString('en-CA')); // 'YYYY-MM-DD' in local time
+  const [tomorrow] = useState(() => {
+    const tomorrowDate = new Date();
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    return tomorrowDate.toLocaleDateString('en-CA');
+  });
 
-  // Fetch current week menus on component mount
+  // Fetch current week menus on mount and check for date changes
   useEffect(() => {
     fetchWeekMenus();
+    
+    // Set up a timer to check for date change every minute
+    const dateCheckInterval = setInterval(() => {
+      const currentDate = new Date().toLocaleDateString('en-CA');
+      if (currentDate !== today) {
+        window.location.reload(); // Refresh to update today and tomorrow
+      }
+    }, 60000); // Check every minute
+    
+    return () => clearInterval(dateCheckInterval);
   }, []);
 
   // **Fetch Functions**
@@ -35,13 +52,16 @@ const MenuAdminPanel = () => {
     try {
       const data = await getCurrentWeekMenu();
       
-      // Transform data for display if needed
+      // Process data, assuming menu.date is 'YYYY-MM-DD' in local time
       const processedData = data.map(menu => ({
         ...menu,
         breakfast: Array.isArray(menu.breakfast) ? menu.breakfast : (menu.breakfast?.split(',').map(item => item.trim()) || []),
         lunch: Array.isArray(menu.lunch) ? menu.lunch : (menu.lunch?.split(',').map(item => item.trim()) || []),
         snacks: Array.isArray(menu.snacks) ? menu.snacks : (menu.snacks?.split(',').map(item => item.trim()) || []),
-        dinner: Array.isArray(menu.dinner) ? menu.dinner : (menu.dinner?.split(',').map(item => item.trim()) || [])
+        dinner: Array.isArray(menu.dinner) ? menu.dinner : (menu.dinner?.split(',').map(item => item.trim()) || []),
+        // Set flags using direct string comparison
+        isToday: menu.date === today,
+        isTomorrow: menu.date === tomorrow
       }));
       
       setMenus(processedData);
@@ -58,13 +78,16 @@ const MenuAdminPanel = () => {
     try {
       const data = await getAllMenus();
       
-      // Transform data for display if needed
+      // Process data, assuming menu.date is 'YYYY-MM-DD' in local time
       const processedData = data.map(menu => ({
         ...menu,
         breakfast: Array.isArray(menu.breakfast) ? menu.breakfast : (menu.breakfast?.split(',').map(item => item.trim()) || []),
         lunch: Array.isArray(menu.lunch) ? menu.lunch : (menu.lunch?.split(',').map(item => item.trim()) || []),
         snacks: Array.isArray(menu.snacks) ? menu.snacks : (menu.snacks?.split(',').map(item => item.trim()) || []),
-        dinner: Array.isArray(menu.dinner) ? menu.dinner : (menu.dinner?.split(',').map(item => item.trim()) || [])
+        dinner: Array.isArray(menu.dinner) ? menu.dinner : (menu.dinner?.split(',').map(item => item.trim()) || []),
+        // Set flags using direct string comparison
+        isToday: menu.date === today,
+        isTomorrow: menu.date === tomorrow
       }));
       
       setMenus(processedData);
@@ -79,7 +102,6 @@ const MenuAdminPanel = () => {
   // **CRUD Functions**
   const createMenu = async () => {
     try {
-      // Filter out empty items and join arrays into comma-separated strings
       const cleanFormData = {
         date: formData.date,
         breakfast: formData.breakfast.filter(item => item?.trim() !== '').join(', '),
@@ -89,8 +111,6 @@ const MenuAdminPanel = () => {
       };
       
       await apiCreateMenu(cleanFormData);
-
-      // Refresh based on current view
       if (currentView === 'create' || currentView === 'week') {
         await fetchWeekMenus();
       } else if (currentView === 'all') {
@@ -109,7 +129,6 @@ const MenuAdminPanel = () => {
     }
     
     try {
-      // Filter out empty items and join arrays into comma-separated strings
       const cleanFormData = {
         breakfast: formData.breakfast.filter(item => item?.trim() !== '').join(', '),
         lunch: formData.lunch.filter(item => item?.trim() !== '').join(', '),
@@ -118,8 +137,6 @@ const MenuAdminPanel = () => {
       };
       
       await apiUpdateMenu(selectedMenu._id, cleanFormData);
-
-      // Refresh based on current view
       if (currentView === 'edit' || currentView === 'week') {
         await fetchWeekMenus();
       } else if (currentView === 'all') {
@@ -141,7 +158,6 @@ const MenuAdminPanel = () => {
 
     try {
       await apiDeleteMenu(id);
-
       if (currentView === 'week') {
         await fetchWeekMenus();
       } else {
@@ -155,14 +171,13 @@ const MenuAdminPanel = () => {
   // **Helper Functions**
   const resetForm = () => {
     setFormData({
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('en-CA'),
       breakfast: [],
       lunch: [],
       snacks: [],
       dinner: []
     });
     setSelectedMenu(null);
-    // Set view back to 'week' or 'all' based on what was active
     setCurrentView(prevView => prevView === 'edit' || prevView === 'create' ? 'week' : prevView);
   };
 
@@ -170,15 +185,8 @@ const MenuAdminPanel = () => {
     if (!menu) return;
     
     setSelectedMenu(menu);
-    const menuDate = new Date(menu.date);
-    // Handle invalid dates gracefully
-    const dateString = !isNaN(menuDate.getTime()) ? 
-      menuDate.toISOString().split('T')[0] : 
-      new Date().toISOString().split('T')[0];
-    
-    // Ensure we have arrays for all meal types
     setFormData({
-      date: dateString,
+      date: menu.date, // Use menu.date directly as it's 'YYYY-MM-DD' in local time
       breakfast: Array.isArray(menu.breakfast) ? [...menu.breakfast] : (menu.breakfast?.split(',').map(item => item.trim()) || []),
       lunch: Array.isArray(menu.lunch) ? [...menu.lunch] : (menu.lunch?.split(',').map(item => item.trim()) || []),
       snacks: Array.isArray(menu.snacks) ? [...menu.snacks] : (menu.snacks?.split(',').map(item => item.trim()) || []),
@@ -382,17 +390,34 @@ const MenuAdminPanel = () => {
 
             {menus.length === 0 ? (
               <div className="bg-white p-6 text-center rounded-lg border border-dashed border-gray-300 text-gray-500">
-                No menus found. Click &quot;New Menu&quot; to create one.
+                No menus found. Click "New Menu" to create one.
               </div>
             ) : (
               <div className="space-y-4">
                 {menus.map(menu => menu && menu._id ? (
-                  <div key={menu._id} className="bg-white shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-                    <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                  <div 
+                    key={menu._id} 
+                    className={`bg-white shadow-sm rounded-lg border hover:shadow-md transition-shadow ${
+                      menu.isToday 
+                        ? 'border-blue-500 ring-2 ring-blue-200' 
+                        : menu.isTomorrow 
+                          ? 'border-green-500 ring-1 ring-green-200' 
+                          : 'border-gray-200'
+                    }`}
+                  >
+                    <div className={`p-4 border-b flex justify-between items-center ${
+                      menu.isToday 
+                        ? 'bg-blue-50 border-blue-200' 
+                        : menu.isTomorrow 
+                          ? 'bg-green-50 border-green-200' 
+                          : 'bg-gray-50 border-gray-200'
+                    }`}>
                       <div className="flex items-center gap-3">
-                        <Calendar size={18} className="text-blue-600" />
+                        <Calendar size={18} className={menu.isToday ? 'text-blue-600' : menu.isTomorrow ? 'text-green-600' : 'text-gray-500'} />
                         <h3 className="font-medium text-gray-900">
-                          {menu.dateLabel ? `${menu.dateLabel} - ` : ''}{formatDate(menu.date)}
+                          {formatDate(menu.date)}
+                          {menu.isToday && <span className="ml-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full">Today</span>}
+                          {menu.isTomorrow && <span className="ml-2 bg-green-600 text-white text-xs px-2 py-1 rounded-full">Tomorrow</span>}
                         </h3>
                       </div>
                       <div className="flex gap-2">
