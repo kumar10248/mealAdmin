@@ -1,4 +1,5 @@
 "use client";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
@@ -22,7 +23,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ adminId, password }), // Changed from adminid to adminId
+        body: JSON.stringify({ adminId, password }),
       });
       
       if (!res.ok) {
@@ -44,28 +45,52 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
-      <h1 className="text-3xl font-extrabold">Cumeal - Admin</h1>
-      <form className="flex flex-col items-center justify-center gap-3 mt-12 w-full sm:w-1/2 md:w-1/4" onSubmit={handleLogin}>
-        <Input 
-          type="text" 
-          placeholder="Admin ID" 
-          value={adminId} 
-          onChange={(e) => setAdminId(e.target.value)}
-          disabled={loading}
-        />
-        <Input 
-          type="password" 
-          placeholder="Password" 
-          value={password} 
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={loading}
-        />
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        <Button type="submit" disabled={loading}>
-          {loading ? "Signing in..." : "Sign In"}
-        </Button>
-      </form>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+        <h1 className="text-2xl font-bold text-center">Cumeal - Admin</h1>
+        
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="adminId" className="text-sm font-medium">Admin ID</label>
+            <Input
+              id="adminId"
+              type="text"
+              value={adminId}
+              onChange={(e) => setAdminId(e.target.value)}
+              placeholder="Enter your admin ID"
+              disabled={loading}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="password" className="text-sm font-medium">Password</label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              disabled={loading}
+              required
+            />
+          </div>
+          
+          {error && (
+            <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
+              {error}
+            </div>
+          )}
+          
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={loading}
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, Edit, Trash2, Plus, X, Save } from 'lucide-react';
 import { 
   getCurrentWeekMenu, 
@@ -10,28 +10,122 @@ import {
 } from '../lib/api';
 
 const MenuAdminPanel = () => {
-  // State declarations
+  // State declarations - organized by purpose
   const [menus, setMenus] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentView, setCurrentView] = useState('week'); // 'week', 'all', 'create', 'edit'
   const [selectedMenu, setSelectedMenu] = useState(null);
+  
+  // Memoize date values to prevent unnecessary re-renders
+  const today = React.useMemo(() => new Date().toLocaleDateString('en-CA'), []); // 'YYYY-MM-DD' in local time
+  const tomorrow = React.useMemo(() => {
+    const tomorrowDate = new Date();
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    return tomorrowDate.toLocaleDateString('en-CA');
+  }, []);
+
+  // Form state with proper defaults to prevent null/undefined issues
   const [formData, setFormData] = useState({
-    date: new Date().toLocaleDateString('en-CA'),
+    date: today,
     breakfast: [],
     lunch: [],
     snacks: [],
     dinner: []
   });
-  // Track today and tomorrow using local dates
-  const [today] = useState(new Date().toLocaleDateString('en-CA')); // 'YYYY-MM-DD' in local time
-  const [tomorrow] = useState(() => {
-    const tomorrowDate = new Date();
-    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-    return tomorrowDate.toLocaleDateString('en-CA');
-  });
 
-  // Fetch current week menus on mount and check for date changes
+  // Memoize fetch functions to prevent recreation on each render
+  const fetchWeekMenus = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getCurrentWeekMenu();
+      
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid data format received");
+      }
+      
+      // Process data with defensive programming
+      const processedData = data.map(menu => {
+        if (!menu) return null;
+        
+        return {
+          ...menu,
+          // Safely handle different input formats with nullish coalescing
+          breakfast: Array.isArray(menu.breakfast) 
+            ? menu.breakfast 
+            : (typeof menu.breakfast === 'string' ? menu.breakfast.split(',').map(item => item.trim()) : []),
+          lunch: Array.isArray(menu.lunch) 
+            ? menu.lunch 
+            : (typeof menu.lunch === 'string' ? menu.lunch.split(',').map(item => item.trim()) : []),
+          snacks: Array.isArray(menu.snacks) 
+            ? menu.snacks 
+            : (typeof menu.snacks === 'string' ? menu.snacks.split(',').map(item => item.trim()) : []),
+          dinner: Array.isArray(menu.dinner) 
+            ? menu.dinner 
+            : (typeof menu.dinner === 'string' ? menu.dinner.split(',').map(item => item.trim()) : []),
+          // Set flags
+          isToday: menu.date === today,
+          isTomorrow: menu.date === tomorrow
+        };
+      }).filter(Boolean); // Filter out null items
+      
+      setMenus(processedData);
+      setCurrentView('week');
+    } catch (err) {
+      console.error("Error fetching weekly menus:", err);
+      setError(err?.message || "Failed to fetch weekly menus");
+    } finally {
+      setLoading(false);
+    }
+  }, [today, tomorrow]);
+
+  const fetchAllMenus = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getAllMenus();
+      
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid data format received");
+      }
+      
+      // Process data with defensive programming
+      const processedData = data.map(menu => {
+        if (!menu) return null;
+        
+        return {
+          ...menu,
+          // Safely handle different input formats
+          breakfast: Array.isArray(menu.breakfast) 
+            ? menu.breakfast 
+            : (typeof menu.breakfast === 'string' ? menu.breakfast.split(',').map(item => item.trim()) : []),
+          lunch: Array.isArray(menu.lunch) 
+            ? menu.lunch 
+            : (typeof menu.lunch === 'string' ? menu.lunch.split(',').map(item => item.trim()) : []),
+          snacks: Array.isArray(menu.snacks) 
+            ? menu.snacks 
+            : (typeof menu.snacks === 'string' ? menu.snacks.split(',').map(item => item.trim()) : []),
+          dinner: Array.isArray(menu.dinner) 
+            ? menu.dinner 
+            : (typeof menu.dinner === 'string' ? menu.dinner.split(',').map(item => item.trim()) : []),
+          // Set flags
+          isToday: menu.date === today,
+          isTomorrow: menu.date === tomorrow
+        };
+      }).filter(Boolean); // Filter out null items
+      
+      setMenus(processedData);
+      setCurrentView('all');
+    } catch (err) {
+      console.error("Error fetching all menus:", err);
+      setError(err?.message || "Failed to fetch all menus");
+    } finally {
+      setLoading(false);
+    }
+  }, [today, tomorrow]);
+
+  // Initial data loading and date change checker
   useEffect(() => {
     fetchWeekMenus();
     
@@ -44,73 +138,49 @@ const MenuAdminPanel = () => {
     }, 60000); // Check every minute
     
     return () => clearInterval(dateCheckInterval);
-  }, []);
+  }, [fetchWeekMenus, today]);
 
-  // **Fetch Functions**
-  const fetchWeekMenus = async () => {
-    setLoading(true);
-    try {
-      const data = await getCurrentWeekMenu();
-      
-      // Process data, assuming menu.date is 'YYYY-MM-DD' in local time
-      const processedData = data.map(menu => ({
-        ...menu,
-        breakfast: Array.isArray(menu.breakfast) ? menu.breakfast : (menu.breakfast?.split(',').map(item => item.trim()) || []),
-        lunch: Array.isArray(menu.lunch) ? menu.lunch : (menu.lunch?.split(',').map(item => item.trim()) || []),
-        snacks: Array.isArray(menu.snacks) ? menu.snacks : (menu.snacks?.split(',').map(item => item.trim()) || []),
-        dinner: Array.isArray(menu.dinner) ? menu.dinner : (menu.dinner?.split(',').map(item => item.trim()) || []),
-        // Set flags using direct string comparison
-        isToday: menu.date === today,
-        isTomorrow: menu.date === tomorrow
-      }));
-      
-      setMenus(processedData);
-      setCurrentView('week');
-    } catch (err) {
-      setError(err?.message || "Failed to fetch weekly menus");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Form reset with safe defaults
+  const resetForm = useCallback(() => {
+    setFormData({
+      date: today,
+      breakfast: [],
+      lunch: [],
+      snacks: [],
+      dinner: []
+    });
+    setSelectedMenu(null);
+    setCurrentView(prevView => prevView === 'edit' || prevView === 'create' ? 'week' : prevView);
+  }, [today]);
 
-  const fetchAllMenus = async () => {
-    setLoading(true);
-    try {
-      const data = await getAllMenus();
-      
-      // Process data, assuming menu.date is 'YYYY-MM-DD' in local time
-      const processedData = data.map(menu => ({
-        ...menu,
-        breakfast: Array.isArray(menu.breakfast) ? menu.breakfast : (menu.breakfast?.split(',').map(item => item.trim()) || []),
-        lunch: Array.isArray(menu.lunch) ? menu.lunch : (menu.lunch?.split(',').map(item => item.trim()) || []),
-        snacks: Array.isArray(menu.snacks) ? menu.snacks : (menu.snacks?.split(',').map(item => item.trim()) || []),
-        dinner: Array.isArray(menu.dinner) ? menu.dinner : (menu.dinner?.split(',').map(item => item.trim()) || []),
-        // Set flags using direct string comparison
-        isToday: menu.date === today,
-        isTomorrow: menu.date === tomorrow
-      }));
-      
-      setMenus(processedData);
-      setCurrentView('all');
-    } catch (err) {
-      setError(err?.message || "Failed to fetch all menus");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // **CRUD Functions**
+  // **CRUD Functions with error handling and validation**
   const createMenu = async () => {
+    if (!formData.date) {
+      setError("Date is required");
+      return;
+    }
+    
     try {
+      // Safely filter and join items, preventing empty string issues
       const cleanFormData = {
         date: formData.date,
-        breakfast: formData.breakfast.filter(item => item?.trim() !== '').join(', '),
-        lunch: formData.lunch.filter(item => item?.trim() !== '').join(', '),
-        snacks: formData.snacks.filter(item => item?.trim() !== '').join(', '),
-        dinner: formData.dinner.filter(item => item?.trim() !== '').join(', ')
+        breakfast: Array.isArray(formData.breakfast) 
+          ? formData.breakfast.filter(item => item && item.trim() !== '').join(', ')
+          : '',
+        lunch: Array.isArray(formData.lunch)
+          ? formData.lunch.filter(item => item && item.trim() !== '').join(', ')
+          : '',
+        snacks: Array.isArray(formData.snacks)
+          ? formData.snacks.filter(item => item && item.trim() !== '').join(', ')
+          : '',
+        dinner: Array.isArray(formData.dinner)
+          ? formData.dinner.filter(item => item && item.trim() !== '').join(', ')
+          : ''
       };
       
       await apiCreateMenu(cleanFormData);
+      
+      // Refresh data based on current view
       if (currentView === 'create' || currentView === 'week') {
         await fetchWeekMenus();
       } else if (currentView === 'all') {
@@ -118,6 +188,7 @@ const MenuAdminPanel = () => {
       }
       resetForm();
     } catch (err) {
+      console.error("Error creating menu:", err);
       setError(err?.message || "Failed to create menu");
     }
   };
@@ -129,14 +200,25 @@ const MenuAdminPanel = () => {
     }
     
     try {
+      // Safely filter and join items
       const cleanFormData = {
-        breakfast: formData.breakfast.filter(item => item?.trim() !== '').join(', '),
-        lunch: formData.lunch.filter(item => item?.trim() !== '').join(', '),
-        snacks: formData.snacks.filter(item => item?.trim() !== '').join(', '),
-        dinner: formData.dinner.filter(item => item?.trim() !== '').join(', ')
+        breakfast: Array.isArray(formData.breakfast)
+          ? formData.breakfast.filter(item => item && item.trim() !== '').join(', ')
+          : '',
+        lunch: Array.isArray(formData.lunch)
+          ? formData.lunch.filter(item => item && item.trim() !== '').join(', ')
+          : '',
+        snacks: Array.isArray(formData.snacks)
+          ? formData.snacks.filter(item => item && item.trim() !== '').join(', ')
+          : '',
+        dinner: Array.isArray(formData.dinner)
+          ? formData.dinner.filter(item => item && item.trim() !== '').join(', ')
+          : ''
       };
       
       await apiUpdateMenu(selectedMenu._id, cleanFormData);
+      
+      // Refresh data based on current view
       if (currentView === 'edit' || currentView === 'week') {
         await fetchWeekMenus();
       } else if (currentView === 'all') {
@@ -144,6 +226,7 @@ const MenuAdminPanel = () => {
       }
       resetForm();
     } catch (err) {
+      console.error("Error updating menu:", err);
       setError(err?.message || "Failed to update menu");
     }
   };
@@ -158,70 +241,80 @@ const MenuAdminPanel = () => {
 
     try {
       await apiDeleteMenu(id);
+      
+      // Refresh data based on current view
       if (currentView === 'week') {
         await fetchWeekMenus();
       } else {
         await fetchAllMenus();
       }
     } catch (err) {
+      console.error("Error deleting menu:", err);
       setError(err?.message || "Failed to delete menu");
     }
   };
 
   // **Helper Functions**
-  const resetForm = () => {
-    setFormData({
-      date: new Date().toLocaleDateString('en-CA'),
-      breakfast: [],
-      lunch: [],
-      snacks: [],
-      dinner: []
-    });
-    setSelectedMenu(null);
-    setCurrentView(prevView => prevView === 'edit' || prevView === 'create' ? 'week' : prevView);
-  };
-
-  const handleEditMenu = (menu) => {
+  const handleEditMenu = useCallback((menu) => {
     if (!menu) return;
     
     setSelectedMenu(menu);
     setFormData({
-      date: menu.date, // Use menu.date directly as it's 'YYYY-MM-DD' in local time
-      breakfast: Array.isArray(menu.breakfast) ? [...menu.breakfast] : (menu.breakfast?.split(',').map(item => item.trim()) || []),
-      lunch: Array.isArray(menu.lunch) ? [...menu.lunch] : (menu.lunch?.split(',').map(item => item.trim()) || []),
-      snacks: Array.isArray(menu.snacks) ? [...menu.snacks] : (menu.snacks?.split(',').map(item => item.trim()) || []),
-      dinner: Array.isArray(menu.dinner) ? [...menu.dinner] : (menu.dinner?.split(',').map(item => item.trim()) || [])
+      date: menu.date || today,
+      // Ensure arrays with defensive programming
+      breakfast: Array.isArray(menu.breakfast) 
+        ? [...menu.breakfast] 
+        : (typeof menu.breakfast === 'string' ? menu.breakfast.split(',').map(item => item.trim()) : []),
+      lunch: Array.isArray(menu.lunch) 
+        ? [...menu.lunch] 
+        : (typeof menu.lunch === 'string' ? menu.lunch.split(',').map(item => item.trim()) : []),
+      snacks: Array.isArray(menu.snacks) 
+        ? [...menu.snacks] 
+        : (typeof menu.snacks === 'string' ? menu.snacks.split(',').map(item => item.trim()) : []),
+      dinner: Array.isArray(menu.dinner) 
+        ? [...menu.dinner] 
+        : (typeof menu.dinner === 'string' ? menu.dinner.split(',').map(item => item.trim()) : [])
     });
     
     setCurrentView('edit');
-  };
+  }, [today]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleMealItemChange = (mealType, index, value) => {
-    const updatedItems = [...formData[mealType]];
-    updatedItems[index] = value;
-    setFormData(prev => ({ ...prev, [mealType]: updatedItems }));
-  };
+  const handleMealItemChange = useCallback((mealType, index, value) => {
+    setFormData(prev => {
+      // Create a safe copy of the meal items array
+      const mealItems = Array.isArray(prev[mealType]) ? [...prev[mealType]] : [];
+      // Update the value at the specified index
+      mealItems[index] = value;
+      return { ...prev, [mealType]: mealItems };
+    });
+  }, []);
 
-  const addMealItem = (mealType) => {
-    setFormData(prev => ({
-      ...prev,
-      [mealType]: [...prev[mealType], '']
-    }));
-  };
+  const addMealItem = useCallback((mealType) => {
+    setFormData(prev => {
+      // Create a safe copy of the meal items array
+      const mealItems = Array.isArray(prev[mealType]) ? [...prev[mealType]] : [];
+      return { ...prev, [mealType]: [...mealItems, ''] };
+    });
+  }, []);
 
-  const removeMealItem = (mealType, index) => {
-    setFormData(prev => ({
-      ...prev,
-      [mealType]: prev[mealType].filter((_, i) => i !== index)
-    }));
-  };
+  const removeMealItem = useCallback((mealType, index) => {
+    setFormData(prev => {
+      // Create a safe copy of the meal items array and filter out the index
+      const mealItems = Array.isArray(prev[mealType]) 
+        ? prev[mealType].filter((_, i) => i !== index) 
+        : [];
+      return { ...prev, [mealType]: mealItems };
+    });
+  }, []);
 
-  const formatDate = (dateString) => {
+  const formatDate = useCallback((dateString) => {
+    if (!dateString) return 'Invalid date';
+    
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) {
@@ -234,13 +327,24 @@ const MenuAdminPanel = () => {
         day: 'numeric'
       });
     } catch (err) {
+      console.error("Error formatting date:", err);
       return 'Invalid date';
     }
-  };
+  }, []);
+
+  // Loading state with fallback UI
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center p-8 min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading menu data...</p>
+        </div>
+      </div>
+    );
+  }
 
   // **Render**
-  if (loading) return <div className="flex justify-center p-8">Loading menu data...</div>;
-
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
@@ -287,13 +391,14 @@ const MenuAdminPanel = () => {
             </button>
           </div>
 
-          {/* Error Display */}
+          {/* Error Display with dismissal */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-4 flex items-center justify-between">
               <span>{error}</span>
               <button 
                 onClick={() => setError(null)}
                 className="text-red-700 hover:text-red-900"
+                aria-label="Dismiss error"
               >
                 <X size={16} />
               </button>
@@ -311,20 +416,23 @@ const MenuAdminPanel = () => {
               <button
                 onClick={resetForm}
                 className="text-gray-500 hover:text-gray-700"
+                aria-label="Close form"
               >
                 <X size={20} />
               </button>
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="menu-date">Date</label>
               <input
+                id="menu-date"
                 type="date"
                 name="date"
-                value={formData.date}
+                value={formData.date || ''}
                 onChange={handleInputChange}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={currentView === 'edit'}
+                required
               />
             </div>
 
@@ -339,6 +447,7 @@ const MenuAdminPanel = () => {
                     type="button"
                     onClick={() => addMealItem(mealType)}
                     className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    aria-label={`Add ${mealType} item`}
                   >
                     <Plus size={14} />
                     Add Item
@@ -346,7 +455,7 @@ const MenuAdminPanel = () => {
                 </div>
 
                 <div className="space-y-2">
-                  {formData[mealType].map((item, index) => (
+                  {Array.isArray(formData[mealType]) && formData[mealType].map((item, index) => (
                     <div key={`${mealType}-${index}`} className="flex gap-2 items-center">
                       <input
                         type="text"
@@ -354,11 +463,13 @@ const MenuAdminPanel = () => {
                         onChange={(e) => handleMealItemChange(mealType, index, e.target.value)}
                         className="flex-grow p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder={`Enter ${mealType} item...`}
+                        aria-label={`${mealType} item ${index + 1}`}
                       />
                       <button
                         type="button"
                         onClick={() => removeMealItem(mealType, index)}
                         className="p-2 text-red-500 hover:text-red-700 rounded-md hover:bg-red-50"
+                        aria-label={`Remove ${mealType} item ${index + 1}`}
                       >
                         <Trash2 size={18} />
                       </button>
@@ -388,7 +499,7 @@ const MenuAdminPanel = () => {
               {currentView === 'week' ? 'Current Week Menus' : 'All Menus'}
             </h2>
 
-            {menus.length === 0 ? (
+            {!menus || menus.length === 0 ? (
               <div className="bg-white p-6 text-center rounded-lg border border-dashed border-gray-300 text-gray-500">
                 No menus found. Click "New Menu" to create one.
               </div>
@@ -425,6 +536,7 @@ const MenuAdminPanel = () => {
                           type="button"
                           onClick={() => handleEditMenu(menu)}
                           className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md"
+                          aria-label={`Edit menu for ${formatDate(menu.date)}`}
                         >
                           <Edit size={18} />
                         </button>
@@ -432,6 +544,7 @@ const MenuAdminPanel = () => {
                           type="button"
                           onClick={() => deleteMenu(menu._id)}
                           className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md"
+                          aria-label={`Delete menu for ${formatDate(menu.date)}`}
                         >
                           <Trash2 size={18} />
                         </button>
