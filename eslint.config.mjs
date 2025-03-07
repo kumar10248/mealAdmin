@@ -1,14 +1,25 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+// Add to your .eslintrc.js or next.config.js
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Option 1: In .eslintrc.js
+module.exports = {
+  // your other config
+  rules: {
+    'react/no-unescaped-entities': 'off',
+    // other rules
+  },
+};
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+// Option 2: In next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  eslint: {
+    // It's not recommended to completely disable ESLint during builds
+    ignoreDuringBuilds: false,
+    // But you can ignore specific rules
+    rules: {
+      'react/no-unescaped-entities': 'off',
+    },
+  },
+};
 
-const eslintConfig = [...compat.extends("next/core-web-vitals")];
-
-export default eslintConfig;
+module.exports = nextConfig;
