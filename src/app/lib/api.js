@@ -1,4 +1,57 @@
+// services/routes.js
 const API_URL = process.env.API_URL || 'https://cumeal.vercel.app/api';
+
+
+// Helper function for handling JWT tokens
+const getAuthHeaders = () => {
+  let headers = {
+    'Content-Type': 'application/json',
+  };
+
+  // For client-side only
+  if (typeof window !== 'undefined') {
+    const accessToken = localStorage.getItem('accessToken');
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+  }
+
+  return headers;
+};
+
+// Error handling helper
+const handleResponse = async (response) => {
+  // Check if the response is 401 Unauthorized
+  if (response.status === 401) {
+    // Try to refresh the token
+    const refreshed = await refreshToken();
+    if (!refreshed) {
+      // If refresh failed, redirect to login
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userData');
+        window.location.href = '/';
+      }
+      throw new Error('Session expired. Please login again.');
+    }
+    
+    // Retry the original request with new token
+    // This would need to be implemented based on your specific needs
+  }
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Request failed');
+  }
+  
+  return response.json();
+};
+
+// -------------------- Auth Services --------------------
+
+// Register a new user
+
 
 // Get all menus
 export async function getAllMenus() {

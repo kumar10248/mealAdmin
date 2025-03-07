@@ -7,7 +7,7 @@ import { useState } from "react";
 
 export default function Home() {
   const router = useRouter();
-  const [adminId, setAdminId] = useState("");
+  const [username, setAdminId] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -18,12 +18,12 @@ export default function Home() {
     setError("");
     
     try {
-      const res = await fetch("https://cumeal.vercel.app/api/menu/login", {
+      const res = await fetch("https://cumeal.vercel.app/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ adminId, password }),
+        body: JSON.stringify({ username, password }),
       });
       
       if (!res.ok) {
@@ -55,7 +55,7 @@ export default function Home() {
             <Input
               id="adminId"
               type="text"
-              value={adminId}
+              value={username}
               onChange={(e) => setAdminId(e.target.value)}
               placeholder="Enter your admin ID"
               disabled={loading}
