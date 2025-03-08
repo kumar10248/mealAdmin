@@ -335,7 +335,7 @@ const MenuAdminPanel = () => {
   // Loading state with fallback UI
   if (loading) {
     return (
-      <div className="flex justify-center items-center p-8 min-h-screen">
+      <div className="flex justify-center items-center p-8 min-h-screen ">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading menu data...</p>
@@ -346,10 +346,10 @@ const MenuAdminPanel = () => {
 
   // **Render**
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 bg-gray-300">
       <div className="max-w-6xl mx-auto">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Menu Administration</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4 ">Menu Administration</h1>
 
           {/* Navigation Buttons */}
           <div className="flex flex-wrap gap-2 mb-4">
@@ -438,7 +438,7 @@ const MenuAdminPanel = () => {
 
             {/* Meal Sections */}
             {['breakfast', 'lunch', 'snacks', 'dinner'].map(mealType => (
-              <div key={mealType} className="mb-6">
+              <div key={mealType} className="mb-6 ">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-base font-medium text-gray-700 capitalize">
                     {mealType}
@@ -456,7 +456,7 @@ const MenuAdminPanel = () => {
 
                 <div className="space-y-2">
                   {Array.isArray(formData[mealType]) && formData[mealType].map((item, index) => (
-                    <div key={`${mealType}-${index}`} className="flex gap-2 items-center">
+                    <div key={`${mealType}-${index}`} className="flex gap-2 items-center ">
                       <input
                         type="text"
                         value={item || ''}
@@ -495,7 +495,7 @@ const MenuAdminPanel = () => {
         {/* Menu List Display */}
         {(currentView === 'week' || currentView === 'all') && (
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6 ">
               {currentView === 'week' ? 'Current Week Menus' : 'All Menus'}
             </h2>
 
@@ -504,11 +504,11 @@ const MenuAdminPanel = () => {
                 No menus found. Click "New Menu" to create one.
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 ">
                 {menus.map(menu => menu && menu._id ? (
                   <div 
                     key={menu._id} 
-                    className={`bg-white shadow-sm rounded-lg border hover:shadow-md transition-shadow ${
+                    className={`bg-gradient-to-r from-amber-400 to-orange-600 shadow-sm rounded-lg border hover:shadow-md transition-shadow ${
                       menu.isToday 
                         ? 'border-blue-500 ring-2 ring-blue-200' 
                         : menu.isTomorrow 
@@ -523,7 +523,7 @@ const MenuAdminPanel = () => {
                           ? 'bg-green-50 border-green-200' 
                           : 'bg-gray-50 border-gray-200'
                     }`}>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 ">
                         <Calendar size={18} className={menu.isToday ? 'text-blue-600' : menu.isTomorrow ? 'text-green-600' : 'text-gray-500'} />
                         <h3 className="font-medium text-gray-900">
                           {formatDate(menu.date)}
@@ -531,7 +531,7 @@ const MenuAdminPanel = () => {
                           {menu.isTomorrow && <span className="ml-2 bg-green-600 text-white text-xs px-2 py-1 rounded-full">Tomorrow</span>}
                         </h3>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 ">
                         <button
                           type="button"
                           onClick={() => handleEditMenu(menu)}
@@ -551,7 +551,7 @@ const MenuAdminPanel = () => {
                       </div>
                     </div>
 
-                    <div className="p-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="p-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 ">
                       {['breakfast', 'lunch', 'snacks', 'dinner'].map(mealType => (
                         <div key={`${menu._id}-${mealType}`} className="border border-gray-100 rounded-lg p-3 bg-gray-50">
                           <h4 className="font-medium text-gray-900 text-sm uppercase mb-2 tracking-wide">
