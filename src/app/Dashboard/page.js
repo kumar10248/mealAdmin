@@ -9,6 +9,7 @@ import {
   deleteMenu as apiDeleteMenu 
 } from '../lib/api';
 
+
 const MenuAdminPanel = () => {
   // State declarations - organized by purpose
   const [menus, setMenus] = useState([]);
@@ -353,6 +354,31 @@ const MenuAdminPanel = () => {
 
           {/* Navigation Buttons */}
           <div className="flex flex-wrap gap-2 mb-4">
+            
+           {/* Replace this in the header navigation section: */}
+<div>
+  <button
+    onClick={() => window.location.href = '/feedback'}  // Adjust path as needed
+    className="px-4 py-2 rounded-md bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 flex items-center gap-1"
+    aria-label="Go to feedback page"
+  >
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="16" 
+      height="16" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+    Feedback
+  </button>
+</div>
+           
             <button
               onClick={fetchWeekMenus}
               className={`px-4 py-2 rounded-md transition-colors flex items-center gap-1 ${
